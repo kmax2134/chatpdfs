@@ -38,15 +38,15 @@ def get_text_chunks(text):
     chunks = text_splitter.split_text(text)
     return chunks
 
+from langchain.vectorstores import FAISS
+
 def get_vector_store(text_chunks):
-    vector_store = AstraDBVectorStore(
-        embedding=embedding,
-        collection_name="pdf_text_chunks",
-        api_endpoint=ASTRA_DB_API_ENDPOINT,
-        token=ASTRA_DB_APPLICATION_TOKEN,
-        namespace=ASTRA_DB_KEYSPACE,
+    embeddings = HuggingFaceInferenceAPIEmbeddings(
+        api_key=HF_TOKEN,
+        model_name="BAAI/bge-base-en-v1.5"
     )
-    vector_store.ingest_from_texts(text_chunks)
+    vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
+    vector_store.save_local("faiss_index")
 
 def get_conversational_chain():
     prompt_template = """
