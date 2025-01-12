@@ -67,7 +67,7 @@ def get_conversational_chain():
 
 def user_input(user_question):
     # Reuse Hugging Face Embeddings
-    embeddings = HuggingFaceInferenceAPIEmbeddings(
+    embeddings = HuggingFaceEmbeddings(
         api_key=HF_TOKEN,
         model_name="BAAI/bge-base-en-v1.5"
     )
