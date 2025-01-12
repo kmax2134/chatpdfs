@@ -2,17 +2,28 @@ import streamlit as st
 from PyPDF2 import PdfReader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import os
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
-import google.generativeai as genai
-from langchain_community.vectorstores import FAISS
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain.embeddings import HuggingFaceInferenceAPIEmbeddings
+from langchain_community.vectorstores import AstraDBVectorStore
+from langchain_groq import ChatGroq  # Assuming ChatGroq is correctly installed
 from langchain.chains.question_answering import load_qa_chain
 from langchain.prompts import PromptTemplate
 from dotenv import load_dotenv
 
+# Load environment variables
 load_dotenv()
-# os.getenv("GOOGLE_API_KEY")
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+
+# API keys and configuration
+GROQ_API_KEY=os.getenv("GROQ_API_KEY")
+HF_TOKEN = os.getenv("HF_TOKEN")
+ASTRA_DB_API_ENDPOINT = os.getenv("ASTRA_DB_API_ENDPOINT")
+ASTRA_DB_APPLICATION_TOKEN = os.getenv("ASTRA_DB_APPLICATION_TOKEN")
+ASTRA_DB_KEYSPACE = os.getenv("ASTRA_DB_KEYSPACE")
+
+# HuggingFace Embeddings setup
+embedding = HuggingFaceInferenceAPIEmbeddings(
+    api_key=HF_TOKEN,
+    model_name="BAAI/bge-base-en-v1.5"
+)
 
 def get_pdf_text(pdf_docs):
     text = ""
@@ -28,9 +39,14 @@ def get_text_chunks(text):
     return chunks
 
 def get_vector_store(text_chunks):
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
-    vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
-    vector_store.save_local("faiss_index")
+    vector_store = AstraDBVectorStore(
+        embedding=embedding,
+        collection_name="pdf_text_chunks",
+        api_endpoint=ASTRA_DB_API_ENDPOINT,
+        token=ASTRA_DB_APPLICATION_TOKEN,
+        namespace=ASTRA_DB_KEYSPACE,
+    )
+    vector_store.ingest_from_texts(text_chunks)
 
 def get_conversational_chain():
     prompt_template = """
@@ -42,7 +58,8 @@ def get_conversational_chain():
     Answer:
     """
 
-    model = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.3)
+    # Use ChatGroq with the specified model
+    model = ChatGroq(model="llama-3.1-70b-versatile", temperature=0.5)
 
     prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
     chain = load_qa_chain(model, chain_type="stuff", prompt=prompt)
@@ -50,11 +67,14 @@ def get_conversational_chain():
     return chain
 
 def user_input(user_question):
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
-    
-    # Allow dangerous deserialization when loading the FAISS index
-    new_db = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
-    docs = new_db.similarity_search(user_question)
+    vector_store = AstraDBVectorStore(
+        embedding=embedding,
+        collection_name="pdf_text_chunks",
+        api_endpoint=ASTRA_DB_API_ENDPOINT,
+        token=ASTRA_DB_APPLICATION_TOKEN,
+        namespace=ASTRA_DB_KEYSPACE,
+    )
+    docs = vector_store.similarity_search(user_question)
 
     chain = get_conversational_chain()
 
