@@ -3,11 +3,11 @@ from PyPDF2 import PdfReader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import os
 from langchain.embeddings import HuggingFaceInferenceAPIEmbeddings
-from langchain_community.vectorstores import AstraDBVectorStore
 from langchain_groq import ChatGroq  # Assuming ChatGroq is correctly installed
 from langchain.chains.question_answering import load_qa_chain
 from langchain.prompts import PromptTemplate
 from dotenv import load_dotenv
+from langchain_community.vectorstores import FAISS
 
 # Load environment variables
 load_dotenv()
@@ -15,8 +15,6 @@ load_dotenv()
 # API keys and configuration
 GROQ_API_KEY=os.getenv("GROQ_API_KEY")
 HF_TOKEN = os.getenv("HF_TOKEN")
-ASTRA_DB_API_ENDPOINT = os.getenv("ASTRA_DB_API_ENDPOINT")
-ASTRA_DB_APPLICATION_TOKEN = os.getenv("ASTRA_DB_APPLICATION_TOKEN")
 ASTRA_DB_KEYSPACE = os.getenv("ASTRA_DB_KEYSPACE")
 
 # HuggingFace Embeddings setup
@@ -38,7 +36,7 @@ def get_text_chunks(text):
     chunks = text_splitter.split_text(text)
     return chunks
 
-from langchain.vectorstores import FAISS
+
 
 def get_vector_store(text_chunks):
     embeddings = HuggingFaceInferenceAPIEmbeddings(
