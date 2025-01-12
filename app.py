@@ -12,16 +12,12 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
+
 # Hugging Face API token
 HF_TOKEN = os.getenv("HF_TOKEN")  # Add your Hugging Face API token in the .env file
 
 # Configure Groq API Key
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")  # Ensure the Groq API key is stored in .env
-if not HF_TOKEN:
-    raise ValueError("HF_TOKEN not found. Please set it in your environment variables.")
-if not GROQ_API_KEY:
-    raise ValueError("GROQ_API_KEY not found. Please set it in your environment variables.")
-
 def get_pdf_text(pdf_docs):
     text = ""
     for pdf in pdf_docs:
